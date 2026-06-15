@@ -23,7 +23,7 @@ const contacts = [
 ];
 
 export function SettingsModal({ activeTheme, onClose, onSelectTheme, theme, visible }: Props) {
-  const version = '1.0.0';
+  const version = '1.1.0';
 
   return (
     <Modal animationType="fade" onRequestClose={onClose} transparent visible={visible}>
