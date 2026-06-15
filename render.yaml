@@ -2,6 +2,7 @@ services:
   - type: web
     name: armingpt-backend
     runtime: docker
+    plan: free
     dockerfilePath: ./Dockerfile
     healthCheckPath: /health
     envVars:
