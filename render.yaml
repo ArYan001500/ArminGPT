@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: armingpt-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: FAMILY_ACCESS_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: llama-3.1-8b-instant
+      - key: RATE_LIMIT_MAX
+        value: "30"

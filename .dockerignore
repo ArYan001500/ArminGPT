@@ -1,0 +1,8 @@
+.env
+.env.local
+.expo
+.expo-home
+dist
+node_modules
+qa
+*.log

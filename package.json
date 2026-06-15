@@ -1,0 +1,32 @@
+{
+  "name": "armingpt",
+  "version": "1.0.0",
+  "main": "index.ts",
+  "dependencies": {
+    "expo": "~56.0.11",
+    "expo-linear-gradient": "~56.0.4",
+    "expo-secure-store": "~56.0.4",
+    "expo-status-bar": "~56.0.4",
+    "expo-system-ui": "~56.0.5",
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "react-native": "0.85.3",
+    "react-native-web": "~0.21.2"
+  },
+  "devDependencies": {
+    "@types/react": "~19.2.2",
+    "typescript": "~6.0.3"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "web": "expo start --web",
+    "server": "node --env-file-if-exists=.env.local backend/server.mjs",
+    "check": "tsc --noEmit",
+    "test:backend": "node backend/smoke-test.mjs",
+    "export:web": "expo export --platform web",
+    "preview:web": "node backend/preview-server.mjs"
+  },
+  "private": true
+}
