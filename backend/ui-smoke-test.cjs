@@ -15,8 +15,8 @@ const types = {
 };
 
 const server = createServer((request, response) => {
-  const pathname = request.url === '/' ? '/index.html' : request.url.split('?')[0];
-  const requested = normalize(join(root, pathname));
+  const pathname = request.url.split('?')[0] === '/' ? '/index.html' : request.url.split('?')[0];
+  const requested = normalize(join(root, pathname.replace(/^[/\\]+/, '')));
   const file = requested.startsWith(root) && existsSync(requested) ? requested : join(root, 'index.html');
   response.writeHead(200, { 'Content-Type': types[extname(file)] || 'application/octet-stream' });
   createReadStream(file).pipe(response);
@@ -34,6 +34,12 @@ async function main() {
   mkdirSync(join(process.cwd(), 'qa'), { recursive: true });
   await page.screenshot({ path: join(process.cwd(), 'qa', 'armingpt-splash.png') });
   await page.waitForTimeout(2_700);
+  if ((await page.locator('input').count()) !== 1) {
+    throw new Error('Family login must show exactly one input.');
+  }
+  if ((await page.getByPlaceholder('https://your-backend.example.com').count()) !== 0) {
+    throw new Error('Backend URL must not be visible in family login.');
+  }
   await page.screenshot({ path: join(process.cwd(), 'qa', 'armingpt-settings.png') });
   await page.getByText('بعداً').click();
   await page.getByText('امروز چطور کمکت کنم؟').waitFor();

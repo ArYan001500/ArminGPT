@@ -14,8 +14,8 @@ const types = {
 };
 
 createServer((request, response) => {
-  const pathname = request.url === '/' ? '/index.html' : request.url.split('?')[0];
-  const requested = normalize(join(root, pathname));
+  const pathname = request.url.split('?')[0] === '/' ? '/index.html' : request.url.split('?')[0];
+  const requested = normalize(join(root, pathname.replace(/^[/\\]+/, '')));
   const file = requested.startsWith(root) && existsSync(requested) ? requested : join(root, 'index.html');
 
   response.writeHead(200, { 'Content-Type': types[extname(file)] || 'application/octet-stream' });

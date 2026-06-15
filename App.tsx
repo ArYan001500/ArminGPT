@@ -17,10 +17,16 @@ import {
 import { LogoMark } from './src/components/LogoMark';
 import { ConnectionModal } from './src/components/ConnectionModal';
 import { MessageBubble } from './src/components/MessageBubble';
+import { SettingsModal } from './src/components/SettingsModal';
 import { ThinkingDots } from './src/components/ThinkingDots';
 import { askArminGPT } from './src/services/chat';
-import { loadConnectionSettings, saveConnectionSettings } from './src/services/settings';
-import { colors } from './src/theme';
+import { loadTheme, saveTheme } from './src/services/preferences';
+import {
+  ARMINGPT_BACKEND_URL,
+  loadConnectionSettings,
+  saveConnectionSettings,
+} from './src/services/settings';
+import { AppTheme, colors, ThemeName, themes } from './src/theme';
 import { ChatMessage, ConnectionSettings } from './src/types';
 
 const starterMessage: ChatMessage = {
@@ -37,7 +43,55 @@ const suggestions = [
   'یک جمله انگیزشی بگو',
 ];
 
-function SplashScreen() {
+function DynamicBackdrop({ theme }: { theme: AppTheme }) {
+  const drift = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const animation = Animated.loop(
+      Animated.sequence([
+        Animated.timing(drift, { duration: 6500, toValue: 1, useNativeDriver: true }),
+        Animated.timing(drift, { duration: 6500, toValue: 0, useNativeDriver: true }),
+      ]),
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [drift]);
+
+  if (theme.name !== 'aurora') return null;
+
+  return (
+    <View pointerEvents="none" style={styles.dynamicLayer}>
+      <Animated.View
+        style={[
+          styles.dynamicOrb,
+          {
+            backgroundColor: theme.accent,
+            transform: [
+              { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [-80, 140] }) },
+              { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [-30, 110] }) },
+              { scale: drift.interpolate({ inputRange: [0, 1], outputRange: [0.8, 1.25] }) },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        style={[
+          styles.dynamicOrb,
+          styles.dynamicOrbSecond,
+          {
+            backgroundColor: theme.secondary,
+            transform: [
+              { translateX: drift.interpolate({ inputRange: [0, 1], outputRange: [110, -100] }) },
+              { translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [100, -40] }) },
+            ],
+          },
+        ]}
+      />
+    </View>
+  );
+}
+
+function SplashScreen({ theme }: { theme: AppTheme }) {
   const fade = useRef(new Animated.Value(0)).current;
   const scale = useRef(new Animated.Value(0.78)).current;
   const glow = useRef(new Animated.Value(0.25)).current;
@@ -73,32 +127,50 @@ function SplashScreen() {
   }, [fade, glow, scale]);
 
   return (
-    <LinearGradient colors={['#050B14', '#0B1730', '#12123A']} style={styles.splash}>
-      <Animated.View style={[styles.splashGlow, { opacity: glow }]} />
+    <LinearGradient colors={theme.background} style={styles.splash}>
+      <DynamicBackdrop theme={theme} />
+      <Animated.View
+        style={[
+          styles.splashGlow,
+          { borderColor: `${theme.secondary}66`, opacity: glow },
+        ]}
+      />
       <Animated.View style={[styles.splashContent, { opacity: fade, transform: [{ scale }] }]}>
-        <LogoMark size={112} />
-        <Text style={styles.splashTitle}>ArminGPT</Text>
+        <LogoMark size={112} theme={theme} />
+        <Text style={[styles.splashTitle, { color: theme.white }]}>ArminGPT</Text>
         <Text style={styles.splashTagline}>دستیار هوشمند خانواده</Text>
-        <View style={styles.companyLine} />
+        <View style={[styles.companyLine, { backgroundColor: theme.accent }]} />
         <Text style={styles.companyText}>کاری از شرکت مهندسین</Text>
-        <Text style={styles.companyName}>فرزانگان آرمین پژوه</Text>
+        <Text style={[styles.companyName, { color: theme.white }]}>فرزانگان آرمین پژوه</Text>
       </Animated.View>
     </LinearGradient>
   );
 }
 
-function ChatScreen() {
+function ChatScreen({
+  activeTheme,
+  onSelectTheme,
+  theme,
+}: {
+  activeTheme: ThemeName;
+  onSelectTheme: (theme: ThemeName) => void;
+  theme: AppTheme;
+}) {
   const [messages, setMessages] = useState<ChatMessage[]>([starterMessage]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [settings, setSettings] = useState<ConnectionSettings>({ apiUrl: '', familyKey: '' });
-  const [settingsVisible, setSettingsVisible] = useState(false);
+  const [settings, setSettings] = useState<ConnectionSettings>({
+    apiUrl: ARMINGPT_BACKEND_URL,
+    familyKey: '',
+  });
+  const [connectionVisible, setConnectionVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
   const listRef = useRef<FlatList<ChatMessage>>(null);
 
   useEffect(() => {
     loadConnectionSettings().then((saved) => {
       setSettings(saved);
-      if (!saved.apiUrl || !saved.familyKey) setSettingsVisible(true);
+      if (!saved.familyKey) setConnectionVisible(true);
     });
   }, []);
 
@@ -136,38 +208,65 @@ function ChatScreen() {
   }
 
   return (
-    <LinearGradient colors={['#07111F', '#0A1224', '#121027']} style={styles.screen}>
+    <LinearGradient colors={theme.background} style={styles.screen}>
+      <DynamicBackdrop theme={theme} />
       <ConnectionModal
         initialValue={settings}
-        onClose={() => setSettingsVisible(false)}
+        onClose={() => setConnectionVisible(false)}
         onSave={async (next) => {
           const saved = await saveConnectionSettings(next);
           setSettings(saved);
-          setSettingsVisible(false);
+          setConnectionVisible(false);
         }}
-        visible={settingsVisible}
+        theme={theme}
+        visible={connectionVisible}
+      />
+      <SettingsModal
+        activeTheme={activeTheme}
+        onClose={() => setMenuVisible(false)}
+        onSelectTheme={onSelectTheme}
+        theme={theme}
+        visible={menuVisible}
       />
       <SafeAreaView style={styles.safeArea}>
         <View style={styles.header}>
           <View style={styles.headerIdentity}>
-            <LogoMark size={48} />
+            <LogoMark size={48} theme={theme} />
             <View>
-              <Text style={styles.headerTitle}>ArminGPT</Text>
+              <Text style={[styles.headerTitle, { color: theme.white }]}>ArminGPT</Text>
               <View style={styles.statusRow}>
-                <View style={styles.onlineDot} />
+                <View style={[styles.onlineDot, { backgroundColor: theme.accent }]} />
                 <Text style={styles.headerSubtitle}>دستیار امن خانواده</Text>
               </View>
             </View>
           </View>
-          <Pressable
-            accessibilityLabel="تنظیمات اتصال"
-            accessibilityRole="button"
-            onPress={() => setSettingsVisible(true)}
-            style={({ pressed }) => [styles.secureBadge, pressed && styles.pressed]}
-          >
-            <Text style={styles.secureBadgeText}>امن</Text>
-            <Text style={styles.lockIcon}>⚙</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityLabel="ورود امن"
+              accessibilityRole="button"
+              onPress={() => setConnectionVisible(true)}
+              style={({ pressed }) => [
+                styles.secureBadge,
+                { backgroundColor: `${theme.accent}16`, borderColor: `${theme.accent}44` },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.secureBadgeText, { color: theme.accent }]}>امن</Text>
+              <Text style={[styles.lockIcon, { color: theme.accent }]}>●</Text>
+            </Pressable>
+            <Pressable
+              accessibilityLabel="تنظیمات برنامه"
+              accessibilityRole="button"
+              onPress={() => setMenuVisible(true)}
+              style={({ pressed }) => [
+                styles.settingsButton,
+                { borderColor: `${theme.secondary}55` },
+                pressed && styles.pressed,
+              ]}
+            >
+              <Text style={[styles.settingsIcon, { color: theme.secondary }]}>⚙</Text>
+            </Pressable>
+          </View>
         </View>
 
         <KeyboardAvoidingView
@@ -179,20 +278,20 @@ function ChatScreen() {
             ref={listRef}
             data={messages}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => <MessageBubble message={item} />}
+            renderItem={({ item }) => <MessageBubble message={item} theme={theme} />}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             ListHeaderComponent={
               <View style={styles.heroCard}>
-                <View style={styles.heroAccent} />
-                <Text style={styles.heroEyebrow}>هر سؤال، یک گفت‌وگوی تازه</Text>
-                <Text style={styles.heroTitle}>امروز چطور کمکت کنم؟</Text>
+                <View style={[styles.heroAccent, { backgroundColor: theme.secondary }]} />
+                <Text style={[styles.heroEyebrow, { color: theme.accent }]}>هر سؤال، یک گفت‌وگوی تازه</Text>
+                <Text style={[styles.heroTitle, { color: theme.white }]}>امروز چطور کمکت کنم؟</Text>
                 <Text style={styles.heroDescription}>
                   می‌توانی فارسی صحبت کنی، سؤال بپرسی یا فقط کمی گپ بزنی.
                 </Text>
               </View>
             }
-            ListFooterComponent={isLoading ? <ThinkingDots /> : null}
+            ListFooterComponent={isLoading ? <ThinkingDots theme={theme} /> : null}
           />
 
           <View style={styles.suggestionWrap}>
@@ -217,10 +316,10 @@ function ChatScreen() {
 
           <View style={styles.composerShell}>
             <LinearGradient
-              colors={['rgba(29, 211, 176, 0.22)', 'rgba(124, 92, 255, 0.24)']}
+              colors={[`${theme.accent}38`, `${theme.secondary}3D`]}
               style={styles.composerBorder}
             >
-              <View style={styles.composer}>
+              <View style={[styles.composer, { backgroundColor: theme.composer }]}>
                 <TextInput
                   accessibilityLabel="پیام شما"
                   multiline
@@ -229,7 +328,7 @@ function ChatScreen() {
                   placeholder="پیامت را بنویس..."
                   placeholderTextColor="#78849B"
                   returnKeyType="send"
-                  style={styles.input}
+                  style={[styles.input, { color: theme.white }]}
                   value={input}
                 />
                 <Pressable
@@ -239,6 +338,7 @@ function ChatScreen() {
                   onPress={() => sendMessage()}
                   style={({ pressed }) => [
                     styles.sendButton,
+                    { backgroundColor: theme.accent },
                     (!input.trim() || isLoading) && styles.sendButtonDisabled,
                     pressed && styles.pressed,
                   ]}
@@ -257,16 +357,29 @@ function ChatScreen() {
 
 export default function App() {
   const [isSplashVisible, setSplashVisible] = useState(true);
+  const [activeTheme, setActiveTheme] = useState<ThemeName>('midnight');
 
   useEffect(() => {
     const timer = setTimeout(() => setSplashVisible(false), 2400);
+    loadTheme().then(setActiveTheme);
     return () => clearTimeout(timer);
   }, []);
+
+  async function selectTheme(nextTheme: ThemeName) {
+    setActiveTheme(nextTheme);
+    await saveTheme(nextTheme);
+  }
+
+  const theme = themes[activeTheme];
 
   return (
     <>
       <StatusBar style="light" />
-      {isSplashVisible ? <SplashScreen /> : <ChatScreen />}
+      {isSplashVisible ? (
+        <SplashScreen theme={theme} />
+      ) : (
+        <ChatScreen activeTheme={activeTheme} onSelectTheme={selectTheme} theme={theme} />
+      )}
     </>
   );
 }
@@ -274,6 +387,24 @@ export default function App() {
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   safeArea: { flex: 1 },
+  dynamicLayer: {
+    bottom: 0,
+    left: 0,
+    overflow: 'hidden',
+    position: 'absolute',
+    right: 0,
+    top: 0,
+  },
+  dynamicOrb: {
+    borderRadius: 220,
+    height: 360,
+    left: -120,
+    opacity: 0.09,
+    position: 'absolute',
+    top: -100,
+    width: 360,
+  },
+  dynamicOrbSecond: { bottom: -140, left: undefined, right: -110, top: undefined },
   splash: {
     alignItems: 'center',
     flex: 1,
@@ -304,7 +435,7 @@ const styles = StyleSheet.create({
     writingDirection: 'rtl',
   },
   companyLine: {
-    backgroundColor: colors.teal,
+    backgroundColor: colors.accent,
     borderRadius: 3,
     height: 3,
     marginBottom: 20,
@@ -333,6 +464,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   headerIdentity: { alignItems: 'center', flexDirection: 'row', gap: 11 },
+  headerActions: { alignItems: 'center', flexDirection: 'row', gap: 8 },
   headerTitle: {
     color: colors.white,
     fontSize: 21,
@@ -340,7 +472,7 @@ const styles = StyleSheet.create({
   },
   statusRow: { alignItems: 'center', flexDirection: 'row', gap: 5, marginTop: 2 },
   onlineDot: {
-    backgroundColor: colors.teal,
+    backgroundColor: colors.accent,
     borderRadius: 4,
     height: 7,
     width: 7,
@@ -357,8 +489,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 7,
   },
-  secureBadgeText: { color: colors.teal, fontSize: 12, fontWeight: '700' },
-  lockIcon: { color: colors.teal, fontSize: 8 },
+  secureBadgeText: { color: colors.accent, fontSize: 12, fontWeight: '700' },
+  lockIcon: { color: colors.accent, fontSize: 8 },
+  settingsButton: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderRadius: 18,
+    borderWidth: 1,
+    height: 38,
+    justifyContent: 'center',
+    width: 38,
+  },
+  settingsIcon: { fontSize: 17 },
   chatArea: { flex: 1 },
   listContent: { paddingBottom: 10, paddingHorizontal: 15 },
   heroCard: {
@@ -372,14 +514,14 @@ const styles = StyleSheet.create({
     padding: 22,
   },
   heroAccent: {
-    backgroundColor: colors.purple,
+    backgroundColor: colors.secondary,
     borderRadius: 10,
     height: 5,
     marginBottom: 18,
     width: 36,
   },
   heroEyebrow: {
-    color: colors.teal,
+    color: colors.accent,
     fontSize: 12,
     fontWeight: '700',
     textAlign: 'right',
@@ -436,7 +578,7 @@ const styles = StyleSheet.create({
   },
   sendButton: {
     alignItems: 'center',
-    backgroundColor: colors.teal,
+    backgroundColor: colors.accent,
     borderRadius: 18,
     height: 42,
     justifyContent: 'center',

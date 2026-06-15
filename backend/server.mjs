@@ -1,4 +1,5 @@
 import { createServer } from 'node:http';
+import { createHash, timingSafeEqual } from 'node:crypto';
 
 const PORT = Number(process.env.PORT || 8787);
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
@@ -45,6 +46,13 @@ function isRateLimited(ip) {
   return current.count > MAX_REQUESTS;
 }
 
+function isValidFamilyKey(candidate) {
+  if (!FAMILY_ACCESS_KEY || typeof candidate !== 'string') return false;
+  const expectedHash = createHash('sha256').update(FAMILY_ACCESS_KEY).digest();
+  const candidateHash = createHash('sha256').update(candidate).digest();
+  return timingSafeEqual(expectedHash, candidateHash);
+}
+
 function sanitizeMessages(messages) {
   if (!Array.isArray(messages)) return [];
   return messages
@@ -66,6 +74,24 @@ const server = createServer(async (request, response) => {
       ok: true,
     });
   }
+
+  if (request.method === 'POST' && request.url === '/auth-check') {
+    if (!FAMILY_ACCESS_KEY) {
+      return sendJson(response, 503, { error: 'FAMILY_ACCESS_KEY is not configured.' });
+    }
+
+    const ip = request.socket.remoteAddress || 'unknown';
+    if (isRateLimited(ip)) {
+      return sendJson(response, 429, { error: 'Too many requests. Try again later.' });
+    }
+
+    if (!isValidFamilyKey(request.headers['x-family-key'])) {
+      return sendJson(response, 401, { error: 'Unauthorized' });
+    }
+
+    return sendJson(response, 200, { ok: true });
+  }
+
   if (request.method !== 'POST' || request.url !== '/chat') {
     return sendJson(response, 404, { error: 'Not found' });
   }
@@ -74,13 +100,13 @@ const server = createServer(async (request, response) => {
     return sendJson(response, 503, { error: 'FAMILY_ACCESS_KEY is not configured.' });
   }
 
-  if (request.headers['x-family-key'] !== FAMILY_ACCESS_KEY) {
-    return sendJson(response, 401, { error: 'Unauthorized' });
-  }
-
   const ip = request.socket.remoteAddress || 'unknown';
   if (isRateLimited(ip)) {
     return sendJson(response, 429, { error: 'Too many requests. Try again later.' });
+  }
+
+  if (!isValidFamilyKey(request.headers['x-family-key'])) {
+    return sendJson(response, 401, { error: 'Unauthorized' });
   }
 
   if (!GROQ_API_KEY) {

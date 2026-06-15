@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, View } from 'react-native';
 
-import { colors } from '../theme';
+import { AppTheme, colors } from '../theme';
 
-export function ThinkingDots() {
+export function ThinkingDots({ theme = colors }: { theme?: AppTheme }) {
   const dots = useRef([0, 1, 2].map(() => new Animated.Value(0.3))).current;
 
   useEffect(() => {
@@ -25,7 +25,7 @@ export function ThinkingDots() {
   return (
     <View style={styles.shell}>
       {dots.map((dot, index) => (
-        <Animated.View key={index} style={[styles.dot, { opacity: dot }]} />
+        <Animated.View key={index} style={[styles.dot, { backgroundColor: theme.accent, opacity: dot }]} />
       ))}
     </View>
   );
@@ -43,5 +43,5 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 13,
   },
-  dot: { backgroundColor: colors.teal, borderRadius: 4, height: 7, width: 7 },
+  dot: { borderRadius: 4, height: 7, width: 7 },
 });

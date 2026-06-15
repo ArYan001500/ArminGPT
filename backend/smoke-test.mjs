@@ -18,6 +18,14 @@ try {
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   const health = await request('/health');
+  const invalidLogin = await request('/auth-check', {
+    headers: { 'X-Family-Key': 'wrong-family-key' },
+    method: 'POST',
+  });
+  const validLogin = await request('/auth-check', {
+    headers: { 'X-Family-Key': 'test-family-key' },
+    method: 'POST',
+  });
   const unauthorized = await request('/chat', {
     body: JSON.stringify({ messages: [{ content: 'test', role: 'user' }] }),
     headers: { 'Content-Type': 'application/json' },
@@ -33,6 +41,8 @@ try {
   });
 
   if (health.status !== 200 || health.body.ok !== true) throw new Error('Health check failed');
+  if (invalidLogin.status !== 401) throw new Error('Invalid family login was not rejected');
+  if (validLogin.status !== 200 || validLogin.body.ok !== true) throw new Error('Valid family login failed');
   if (unauthorized.status !== 401) throw new Error('Unauthorized request was not rejected');
   if (missingProviderKey.status !== 503) throw new Error('Missing Groq key was not reported');
 

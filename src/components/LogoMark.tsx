@@ -1,11 +1,14 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { AppTheme, colors } from '../theme';
+
 type Props = {
   size: number;
+  theme?: AppTheme;
 };
 
-export function LogoMark({ size }: Props) {
+export function LogoMark({ size, theme = colors }: Props) {
   const coreSize = size * 0.72;
 
   return (
@@ -33,7 +36,7 @@ export function LogoMark({ size }: Props) {
         ]}
       />
       <LinearGradient
-        colors={['#1DD3B0', '#4EA8FF', '#7C5CFF']}
+        colors={[theme.accent, theme.glow, theme.secondary]}
         style={[
           styles.core,
           {
@@ -60,7 +63,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     elevation: 12,
     justifyContent: 'center',
-    shadowColor: '#1DD3B0',
     shadowOffset: { height: 0, width: 0 },
     shadowOpacity: 0.5,
     shadowRadius: 14,
